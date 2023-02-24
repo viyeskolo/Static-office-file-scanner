@@ -1,0 +1,49 @@
+import requests
+import hashlib
+
+# Define the API endpoint URLs for the static malware scanners
+vt_url = 'https://www.virustotal.com/vtapi/v2/file/report'
+joe_sandbox_url = 'https://www.joesandbox.com/analysis_result/'
+
+# Set up your VirusTotal API key (you can obtain this from your account on the VirusTotal website)
+vt_api_key = 'YOUR_VIRUSTOTAL_API_KEY'
+
+# Define the file you want to scan
+filename = 'path/to/your/file.docx'
+
+# Open the file and compute its hash
+with open(filename, 'rb') as f:
+    file_contents = f.read()
+    file_hash = hashlib.sha256(file_contents).hexdigest()
+
+# Set up the request parameters for VirusTotal
+params = {'apikey': vt_api_key, 'resource': file_hash}
+
+# Make the request to VirusTotal
+response = requests.get(vt_url, params=params)
+
+# Check the response for malware indicators
+if response.status_code == 200:
+    result = response.json()
+    if result['response_code'] == 0:
+        print('No results found in VirusTotal for this file.')
+    else:
+        positives = result['positives']
+        total = result['total']
+        print(f'{positives}/{total} scanners detected malware in this file on VirusTotal.')
+
+# Make a request to Joe Sandbox (or another static malware scanner) and check for malware indicators
+# Note that Joe Sandbox requires you to upload the file to their service
+files = {'file': open(filename, 'rb')}
+response = requests.post(joe_sandbox_url, files=files)
+
+if response.status_code == 200:
+    result = response.json()
+    if result['status'] == 'SUCCESS':
+        analysis_id = result['analysis_id']
+        report_url = f'https://www.joesandbox.com/analysis/{analysis_id}'
+        print(f'Analysis report available at {report_url}')
+    else:
+        print('No results found in Joe Sandbox for this file.')
+else:
+    print('There was an error making the request to Joe Sandbox.')
